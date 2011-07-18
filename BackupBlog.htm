@@ -1,0 +1,252 @@
+<html>
+<head>
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+<script src="http://code.jquery.com/jquery.js" type="text/javascript"></script>
+<script id="lf" src="../library/muil/localfile.js" type="text/javascript"></script>
+<script src="../library/muil/string.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+	google.load("gdata", "1.s");
+	google.setOnLoadCallback(getMyBlogFeed);
+
+	function getMyBlogFeed(){
+		createImgKludge();
+		initLoginButton();
+		//setupMyService();
+		if (isLoggedIn == true){
+			createImgKludge();
+			//getAllBlogPost(mBlogTitle);
+			displayAllBlogs();
+		}
+	}
+	
+	// The Blogger API needs an img on the page for the
+	// domain. This next function will create it
+	function createImgKludge(){
+		var imgStr = '<img src="{1}/dummy.jpg" style="position:absolute; top: -1000px;"/>';
+		var loc = window.location.href;
+		var pos = loc.lastIndexOf("/");
+		loc = loc.substr(0,pos);
+		imgStr = MUIL.format(imgStr, loc);
+		$(imgStr).appendTo($("body"));
+	}
+	
+	function initLoginButton() {
+		$(".backupbtn").remove();
+		
+		$("#login").unbind("click");
+		scope = "http://www.blogger.com/feeds";
+		if (google.accounts.user.checkLogin(scope) === '') {
+			isLoggedIn = false;
+			$("#login").text("Login to Blogger");
+			$("#login").click(logMeIn);
+		}
+		else {
+			isLoggedIn = true;
+			$("#login").text("Logout of Blogger");
+			$("#login").click(logMeOut);
+		}
+	}
+	
+	function logMeIn() {
+		
+		scope = "http://www.blogger.com/feeds"; 
+		google.accounts.user.login(scope);
+	}
+	
+	
+	function logMeOut() {
+		scope = "http://www.blogger.com/feeds";
+		google.accounts.user.logout(scope);
+		initLoginButton();
+	}
+	
+	function PRINT(iHtmlStr) {
+		iHtmlStr = "<span>" + iHtmlStr + "</span>";
+		$(iHtmlStr).appendTo($("body"));
+	}
+
+	function displayAllBlogs(){
+		mBlogList = new Object();
+		
+		// Create the blogger service object
+		var bloggerService = new google.gdata.blogger.BloggerService('GoogleInc-jsguide-1.0');
+		
+		// The default "metafeed" feed is used to retrieve a list of blogs for a particular logged-in user
+		var feedUri = 'http://www.blogger.com/feeds/default/blogs';
+		
+		// The callback method that will be called when getBlogFeed() returns the list of our blogs
+		var handleBlogFeed = function(blogFeedRoot) {
+		  var blogEntries = blogFeedRoot.feed.getEntries();
+		  
+		  if (blogEntries.length) {
+		    var blogEntry, blogEntryTitle;
+		    for (var i = 0, blogEntry; blogEntry = blogEntries[i]; i++) {
+		    	    //blogEntryTitle = blogEntries[i].getTitle().getText();
+		    	    displayBlog(blogEntries[i]);
+		    }		   		  
+		  }
+		};
+		
+		var handleError = function(error) {
+		  alert(error);
+		};
+		
+		bloggerService.getBlogFeed(feedUri, handleBlogFeed, handleError);
+	}
+	
+	function displayBlog(iBlogEntry){
+		var blogEntryTitle = iBlogEntry.getTitle().getText();
+		mBlogList[blogEntryTitle] = iBlogEntry;
+		var buttonText = "<button class='backupbtn'>" + "Backup " + blogEntryTitle + "</button><br/>";
+		var buttonFn = function (){getAllBlogPost(blogEntryTitle); };
+		$(buttonText).appendTo($("body")).click(buttonFn);
+	}
+	
+	function getAllBlogPost(iBlogTitle)
+	{
+		mBlogTitle = iBlogTitle;
+		mCopyList = new Object();
+		
+		MUIL.FileInit();
+		
+		// Create the blogger service object
+		var bloggerService = new google.gdata.blogger.BloggerService('GoogleInc-jsguide-1.0');
+		
+		// The default "metafeed" feed is used to retrieve a list of blogs for a particular logged-in user
+		var feedUri = 'http://www.blogger.com/feeds/default/blogs';
+		
+		// The callback method that will be called when getBlogFeed() returns the list of our blogs
+		var handleBlogFeed = function(blogFeedRoot) {
+		  var blogEntries = blogFeedRoot.feed.getEntries();
+		  
+		  if (blogEntries.length) {
+		    var blogEntry, blogEntryTitle;
+		    for (var i = 0, blogEntry; blogEntry = blogEntries[i]; i++) {
+		    	    blogEntryTitle = blogEntries[i].getTitle().getText();
+		    	    if (blogEntryTitle == iBlogTitle){
+		    	    	    blogEntry = blogEntries[i];
+		    	    	    break;
+		    	    }
+		    }
+		    
+		    var postsFeedUri = blogEntry.getEntryPostLink().getHref();
+		    var query = new google.gdata.blogger.BlogPostQuery(postsFeedUri);
+
+		    // Set the maximum number of blog posts to return
+		    query.setMaxResults(999);
+		   
+		    bloggerService.getBlogPostFeed(query, handleBlogPostFeed, handleError);
+		  }
+		};
+		
+		// Called when getBlogPostFeed() returns the list of blog posts
+		var handleBlogPostFeed = function(postsFeedRoot) {
+		  var blogTitle = postsFeedRoot.feed.getTitle().getText();
+		  var postEntry, posts = postsFeedRoot.feed.getEntries();
+		  for (var i = 0, postEntry; postEntry = posts[i]; i++) {
+			  var entryUri = postEntry.getSelfLink().getHref();   // post's uri
+			  //PRINT("<h3>" + (posts.length - i).toString() + '-->' + postEntry.getTitle().getText() + "</h3>");
+			  PRINT(".");
+			  //PRINT("<br/>" + postEntry.getContent().getText() );
+			  processPostEntry(postEntry);
+		  }
+		  alert("Finshed Backup");
+		};
+		
+		var handleError = function(error) {
+		  alert(error);
+		};
+		
+		bloggerService.getBlogFeed(feedUri, handleBlogFeed, handleError);
+	}
+	
+	function processPostEntry(iPostEntry){
+		var id = iPostEntry.getId();
+		var pubDate = google.gdata.DateTime.toIso8601(iPostEntry.getPublished().getValue());
+		pubDate = pubDate.substr(0,10);
+		var title = iPostEntry.getTitle().getText();
+		var toFile = (title.replace(/ /g,"_")).replace(/[':!]/g,"") + ".htm";
+		var toPath = getRootDir();
+		toPath += "/" + pubDate + "/" + toFile;
+		var headerStr = '<h2 class="title">' + title + '</h2>';
+		var body = headerStr + iPostEntry.getContent().getText();
+		
+		body = modifyPostEntry(body);
+		MUIL.writeFile(toPath,body)
+	}
+	
+	function getRootDir(){
+		var rootStr = mBlogTitle.replace(/ /g,"_");
+		return rootStr;
+	}
+
+	function modifyPostEntry(iPostEntry){  
+		var postEntryStr = "<div id='CurrentPostEntry' style='visibility:hidden;'>" + iPostEntry + "</div>"; 
+		var attrStr;
+		$("#CurrentPostEntry").remove();
+		$(postEntryStr).appendTo($("body"));
+		$("#CurrentPostEntry [href]").each( function (index){ 
+			//PRINT("found a href");
+			attrStr = this.href;
+			this.href = modifyCopyURL(attrStr, false);
+		});
+		$("#CurrentPostEntry img[src]").each( function (index){ 
+			//PRINT("found a href");
+			attrStr = this.src;
+			this.src = modifyCopyURL(attrStr, true);
+		});
+		return $("#CurrentPostEntry").html();
+	}
+	
+	function modifyCopyURL(iAttrStr, iIsImage){
+		var root = getRootDir();
+		var newAttr = iAttrStr;
+		var epos = newAttr.lastIndexOf(".");
+		if (epos > 0){
+			var ext = newAttr.substr(epos+1).toLowerCase();
+			if ((ext == "jpg")||(ext == "jpeg")||(ext == "png")||(ext == "bmp")){
+				iIsImage = true;
+			}
+		}
+		var pos = newAttr.lastIndexOf("/");
+		if ((pos > 0) && (pos < (newAttr.length - 1))) {
+			newAttr = newAttr.substr(pos+1);
+			if (iIsImage != true) {
+				newAttr = newAttr.replace(/[&#\.=+:!]/g,"_");
+				newAttr = newAttr.replace("?","_");	
+				newAttr += ".htm";
+				newAttr = "../links/" + newAttr;
+			}
+			else {
+				newAttr = "../images/" + newAttr;
+			}
+		}
+		else {
+			return iAttrStr;
+		}
+		
+		var toPath = "/" + root + "/" + newAttr;
+		if (mCopyList[iAttrStr] != true){	
+			// only copy images for now. The link copy does not really work
+			// because of security on the files. i.e. need to logon to google sites etc.
+			if (iIsImage == true){
+				mCopyList[iAttrStr] = true;
+				MUIL.copyFile(toPath,iAttrStr);
+			}
+		}
+		return newAttr;
+	}
+</script>
+</head>
+<body>
+<h2>Backup Blogger Blogs</h2>
+
+<div>
+This page provides functions to backup your Blogger Blogs to a local directory.<br/>
+The backup will be placed in the c:\LocalFileStorage\&lt;blog-name&gt; directory<br/>
+</div>
+<button id="login">Login to Blogger</button>
+<p/>
+</body>
+</html>
