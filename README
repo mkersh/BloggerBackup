@@ -5,4 +5,4 @@ Uses git@github.com:mkersh/FileIOApplet.git to write files to local storage.
 Notes
 ======
 
-1) Works from Firefox. Not sure about other browsers?? I seem to remember some problems when I first wrote it 
+1) Works from Firefox. Not sure about other browsers?? I seem to remember some problems when I first wrote it and did a quick test on other browsers.
