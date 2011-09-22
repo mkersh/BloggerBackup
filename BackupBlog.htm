@@ -65,6 +65,11 @@
 		iHtmlStr = "<span>" + iHtmlStr + "</span>";
 		$(iHtmlStr).appendTo($("body"));
 	}
+	
+	function newline() {
+		iHtmlStr = "<br/>";
+		$(iHtmlStr).appendTo($("body"));
+	}
 
 	function displayAllBlogs(){
 		mBlogList = new Object();
@@ -109,7 +114,7 @@
 		mCopyList = new Object();
 		
 		MUIL.FileInit();
-		
+		newline();		
 		// Create the blogger service object
 		var bloggerService = new google.gdata.blogger.BloggerService('GoogleInc-jsguide-1.0');
 		
@@ -134,7 +139,7 @@
 		    var query = new google.gdata.blogger.BlogPostQuery(postsFeedUri);
 
 		    // Set the maximum number of blog posts to return
-		    query.setMaxResults(999);
+		    query.setMaxResults(9999);
 		   
 		    bloggerService.getBlogPostFeed(query, handleBlogPostFeed, handleError);
 		  }
@@ -166,18 +171,28 @@
 		var pubDate = google.gdata.DateTime.toIso8601(iPostEntry.getPublished().getValue());
 		pubDate = pubDate.substr(0,10);
 		var title = iPostEntry.getTitle().getText();
-		var toFile = (title.replace(/ /g,"_")).replace(/[':!?]/g,"") + ".htm";
+		var toFile = (title.replace(/ /g,"_")).replace(/[':!?\.]/g,"") + ".htm";
 		var toPath = getRootDir();
 		toPath += "/" + pubDate + "/" + toFile;
 		var headerStr = '<h2 class="title">' + title + '</h2>';
 		var body = headerStr + iPostEntry.getContent().getText();
 		
-		body = modifyPostEntry(body);
-		MUIL.writeFile(toPath,body)
+		if (body.search("@DONOTBACKUP@") == -1){
+			body = modifyPostEntry(body);
+			MUIL.writeFile(toPath,body);
+		}
+		else
+		{
+			// There is a problem writing out some blog entries. When the entry contains javascript
+			// In order to get around this I have created a workaround where you can place the tag @DONOTBACKUP@
+			// in a posting that has a problem. This posting will not be backed up.
+			PRINT("+");
+		}
+		
 	}
 	
 	function getRootDir(){
-		var rootStr = mBlogTitle.replace(/ /g,"_");
+		var rootStr = mBlogTitle.replace(/[ ']/g,"_");
 		return rootStr;
 	}
 
@@ -219,6 +234,8 @@
 				newAttr = "../links/" + newAttr;
 			}
 			else {
+				newAttr = newAttr.replace(/[&#\.=+:!%]/g,"_");
+				newAttr = newAttr.replace("?","_");	
 				newAttr = "../images/" + newAttr;
 			}
 		}
@@ -245,6 +262,7 @@
 <div>
 This page provides functions to backup your Blogger Blogs to a local directory.<br/>
 The backup will be placed in the c:\Documents and Settings\&lt;user name&gt;\LocalFileStorage\&lt;blog-name&gt; directory<br/>
+Last Mod: 22 Sept 16:10
 </div>
 <button id="login">Login to Blogger</button>
 <p/>
