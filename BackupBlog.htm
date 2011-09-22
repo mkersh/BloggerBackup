@@ -166,7 +166,7 @@
 		var pubDate = google.gdata.DateTime.toIso8601(iPostEntry.getPublished().getValue());
 		pubDate = pubDate.substr(0,10);
 		var title = iPostEntry.getTitle().getText();
-		var toFile = (title.replace(/ /g,"_")).replace(/[':!]/g,"") + ".htm";
+		var toFile = (title.replace(/ /g,"_")).replace(/[':!?]/g,"") + ".htm";
 		var toPath = getRootDir();
 		toPath += "/" + pubDate + "/" + toFile;
 		var headerStr = '<h2 class="title">' + title + '</h2>';
@@ -212,7 +212,7 @@
 		var pos = newAttr.lastIndexOf("/");
 		if ((pos > 0) && (pos < (newAttr.length - 1))) {
 			newAttr = newAttr.substr(pos+1);
-			if (iIsImage != true) {
+			if (iIsImage != true) { 
 				newAttr = newAttr.replace(/[&#\.=+:!]/g,"_");
 				newAttr = newAttr.replace("?","_");	
 				newAttr += ".htm";
@@ -244,7 +244,7 @@
 
 <div>
 This page provides functions to backup your Blogger Blogs to a local directory.<br/>
-The backup will be placed in the c:\LocalFileStorage\&lt;blog-name&gt; directory<br/>
+The backup will be placed in the c:\Documents and Settings\&lt;user name&gt;\LocalFileStorage\&lt;blog-name&gt; directory<br/>
 </div>
 <button id="login">Login to Blogger</button>
 <p/>
